@@ -1,0 +1,29 @@
+version: v1.0
+name: Initial Pipeline
+agent:
+ machine:
+   type: e1-standard-2
+   os_image: ubuntu2004
+blocks:
+ - name: Scan Block
+   task:
+     jobs:
+       - name: OWASP ZAP Scan
+         commands:
+           - sudo apt-get install -y default-jdk
+           - 'wget https://github.com/zaproxy/zaproxy/releases/download/v2.11.0/ZAP_2.11.0_Linux.tar.gz'
+           - tar -xzf ZAP_2.11.0_Linux.tar.gz
+           - 'export PATH=$PATH:/home/semaphore/ZAP_2.11.0'
+           - 'zap.sh -cmd -config api.disablekey=true -config scanner.attackOnStart=true -config view.mode=attack -quickurl http://example.com -quickout /tmp/results.xml -quickprogress'
+           
+global_job_config:
+  epilogue:
+    always:
+      commands:
+         - '[[ -f /tmp/results.xml ]] && test-results publish /tmp/results.xml'
+after_pipeline:
+  task:
+    jobs:
+      - name: Publish Results
+        commands:
+          - test-results gen-pipeline-report
